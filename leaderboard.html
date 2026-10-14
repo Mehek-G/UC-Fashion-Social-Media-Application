@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAMP.uc — Leaderboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --navy: #1a2e52;
+            --navy-mid: #243d6e;
+            --gold: #c9a84c;
+            --gold-light: #e8c84a;
+            --cream: #f9f8f6;
+            --cream-dark: #f0ede7;
+            --white: #ffffff;
+            --border: #ece9e3;
+            --text: #1a1816;
+            --text-mid: #6b6560;
+            --text-soft: #9b9590;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--cream);
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text);
+        }
+        /* Nav links */
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 13px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-mid);
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+
+        .nav-link:hover { background: var(--cream); color: var(--text); }
+
+        .nav-link.active {
+            background: var(--cream);
+            color: var(--text);
+        }
+
+        .nav-link.active .nav-indicator {
+            display: block;
+        }
+
+        .nav-link svg {
+            width: 15px;
+            height: 15px;
+            flex-shrink: 0;
+        }
+
+        /* ════════════════════════════════════
+           TOP 3 PODIUM  [#2] [#1 center] [#3]
+        ════════════════════════════════════ */
+        .podium-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.15fr 1fr;
+            gap: 20px;
+            align-items: end;
+        }
+
+        .podium-col { display: flex; flex-direction: column; }
+
+        .podium-label { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; padding-left: 2px; }
+
+        .rank-number { font-family: 'DM Serif Display', serif; font-size: 36px; line-height: 1; color: #d4cfc6; }
+        .rank-number.gold { color: #c9a84c; }
+
+        .rank-label-text { display: flex; flex-direction: column; gap: 1px; }
+        .rank-contributor { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #b0aa9f; }
+        .rank-username { font-size: 13px; font-weight: 600; color: #1a1816; text-decoration: none; }
+        .rank-username:hover { color: #c9a84c; }
+
+        .podium-card { border-radius: 16px; overflow: hidden; border: 1.5px solid #ece9e3; background: #fff; transition: box-shadow 0.25s; }
+        .podium-card:hover { box-shadow: 0 10px 36px rgba(0,0,0,0.1); }
+        .podium-card.first { border-color: #c9a84c; box-shadow: 0 0 0 1px rgba(201,168,76,0.3), 0 8px 28px rgba(201,168,76,0.15); }
+
+        .podium-img-wrap { width: 100%; aspect-ratio: 3/4; overflow: hidden; background: #f0ede7; }
+        .podium-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.5s; }
+        .podium-card:hover .podium-img-wrap img { transform: scale(1.04); }
+        .podium-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 36px; color: #d4cfc6; }
+
+        .podium-footer { padding: 12px 14px; border-top: 1px solid #f0ede7; display: flex; align-items: center; justify-content: space-between; }
+        .podium-votes { font-size: 12px; font-weight: 600; color: #9b9590; display: flex; align-items: center; gap: 4px; }
+        .podium-votes .tri { color: #c9a84c; font-size: 10px; }
+
+        .upvote-form { margin: 0; }
+        .upvote-btn { display: flex; align-items: center; gap: 5px; background: transparent; border: 1px solid #e0dbd4; border-radius: 20px; padding: 4px 12px; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #9b9590; cursor: pointer; transition: all 0.2s; }
+        .upvote-btn:hover { border-color: #c9a84c; color: #c9a84c; }
+        .upvote-btn.voted { border-color: #c9a84c; color: #c9a84c; background: rgba(201,168,76,0.08); }
+
+        /* ════════════════════════════════════
+           MOST RECENT — photo card grid
+        ════════════════════════════════════ */
+        .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 16px; }
+
+        .recent-card { border-radius: 14px; overflow: hidden; background: #fff; border: 1px solid #ece9e3; transition: box-shadow 0.25s, transform 0.25s; }
+        .recent-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.09); transform: translateY(-3px); }
+
+        .recent-img-wrap { width: 100%; aspect-ratio: 3/4; overflow: hidden; background: #f0ede7; position: relative; }
+        .recent-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.5s; }
+        .recent-card:hover .recent-img-wrap img { transform: scale(1.06); }
+        .recent-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #d4cfc6; }
+
+        .card-actions { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; opacity: 0; transition: opacity 0.2s; }
+        .recent-card:hover .card-actions { opacity: 1; }
+        .card-action-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,0.22); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.25); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s; }
+        .card-action-btn:hover { background: rgba(255,255,255,0.28); }
+        .card-action-btn svg { width: 14px; height: 14px; }
+
+        .recent-footer { padding: 10px 12px; border-top: 1px solid #f0ede7; display: flex; align-items: center; justify-content: space-between; }
+        .recent-user { display: flex; align-items: center; gap: 7px; }
+        .recent-avatar { width: 24px; height: 24px; border-radius: 50%; background: #e8e3da; display: flex; align-items: center; justify-content: center; color: #9b9590; }
+        .recent-avatar svg { width: 12px; height: 12px; }
+        .recent-username { font-size: 11px; font-weight: 600; color: #3d3a36; }
+        .follow-btn { font-size: 8px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; padding: 4px 9px; border-radius: 4px; border: 1px solid #d4cfc6; background: #f3f0ea; color: #6b6560; cursor: pointer; transition: all 0.15s; }
+        .follow-btn:hover, .follow-btn.following { background: #1a2e52; border-color: #1a2e52; color: #fff; }
+
+        /* ════════════════════════════════════
+           TREND TRACKER — ranked rows
+        ════════════════════════════════════ */
+        .trend-list { display: flex; flex-direction: column; background: #fff; border: 1px solid #ece9e3; border-radius: 16px; overflow: hidden; }
+
+        .trend-row { display: flex; align-items: center; gap: 20px; padding: 20px 24px; border-bottom: 1px solid #f0ede7; transition: background 0.15s; }
+        .trend-row:last-child { border-bottom: none; }
+        .trend-row:hover { background: #faf9f7; }
+
+        .trend-rank-num { font-family: 'DM Serif Display', serif; font-size: 28px; color: #d4cfc6; width: 28px; flex-shrink: 0; text-align: center; line-height: 1; }
+
+        .trend-thumb { width: 56px; height: 56px; border-radius: 10px; overflow: hidden; background: #f0ede7; flex-shrink: 0; }
+        .trend-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .trend-thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #d4cfc6; }
+
+        .trend-info { flex: 1; min-width: 0; }
+        .trend-username { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #1a1816; text-decoration: none; display: block; margin-bottom: 8px; }
+        .trend-username:hover { color: #c9a84c; }
+
+        .trend-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+        .trend-tag { font-size: 11px; font-weight: 500; color: #6b6560; background: #f3f0ea; border: 1px solid #e0dbd4; border-radius: 20px; padding: 3px 10px; text-decoration: none; display: flex; align-items: center; gap: 4px; transition: background 0.15s; }
+        .trend-tag-arrow { color: #c9a84c; font-size: 10px; }
+        .trend-tag:hover { background: #e8e3da; }
+
+        .trend-votes-col { text-align: right; flex-shrink: 0; min-width: 90px; }
+        .trend-vote-count { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
+        .trend-vote-triangle { color: #c9a84c; font-size: 13px; }
+        .trend-vote-number { font-family: 'DM Serif Display', serif; font-size: 26px; color: #1a1816; }
+        .trend-vote-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #b0aa9f; margin-top: 3px; }
+
+        /* ── Empty ── */
+        .empty-state { text-align: center; padding: 60px 0; color: #b0aa9f; }
+        .empty-icon { font-size: 32px; margin-bottom: 12px; }
+        .empty-text { font-size: 14px; font-weight: 300; }
+
+        /* ── Upload Modal ── */
+        .upload-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 300; align-items: center; justify-content: center; }
+        .upload-overlay.open { display: flex; }
+
+        @media (max-width: 680px) {
+            .page-header { padding: 0 16px; }
+            .nav-links { display: none; }
+            .container { padding: 28px 16px 60px; }
+            .podium-grid { grid-template-columns: 1fr; }
+            .recent-grid { grid-template-columns: repeat(2, 1fr); }
+            .trend-row { gap: 12px; padding: 14px 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<header class="page-header">
+    <a class="logo-text" href="{{ url_for('home') }}">OOTD</a>
+
+    <nav class="nav-tabs">
+        <a class="nav-tab" href="{{ url_for('home') }}">Home</a>
+        <a class="nav-tab" href="{{ url_for('discover') }}">Discover</a>
+        <a class="nav-tab" href="#" onclick="switchTab('leaderboard', this); return false;">Leaderboard</a>
+        <a class="nav-tab" href="#" onclick="document.getElementById('uploadModal').classList.add('open'); return false;">Upload</a>
+        <a class="nav-tab" href="#" onclick="switchTab('profile', this); return false;">Profile</a>
+    </nav>
+
+    <div class="nav-right">
+        <div class="nav-avatar">{{ username[0].upper() }}</div>
+        <a class="logout-btn" href="{{ url_for('logout') }}">Sign out</a>
+    </div>
+</header>
+
+<div class="container">
+
+    <!-- ══════════════════════════════════════════
+         SECTION 1 — OUTFITS OF THE DAY  (Top 3)
+         Columns: [#2 left] [#1 center/taller] [#3 right]
+    ══════════════════════════════════════════ -->
+    <div class="section-heading">
+        <h2 class="section-title">Outfits of the Day</h2>
+        <span class="section-sub">Top 3 Looks</span>
+    </div>
+
+    {% if top3 %}
+
+    {% set rank1 = top3[0] %}
+    {% set rank2 = top3[1] if top3|length > 1 else none %}
+    {% set rank3 = top3[2] if top3|length > 2 else none %}
+
+    <div class="podium-grid">
+
+        <!-- #2 LEFT -->
+        <div class="podium-col">
+            {% if rank2 %}
+            <div class="podium-label">
+                <span class="rank-number">#2</span>
+                <div class="rank-label-text">
+                    <span class="rank-contributor">Contributor</span>
+                    <a class="rank-username" href="{{ url_for('profile', uid=rank2.user_id) }}">@{{ rank2.userName or rank2.username }}</a>
+                </div>
+            </div>
+            <div class="podium-card">
+                <div class="podium-img-wrap">
+                    {% if rank2.imageUrl %}<img src="{{ rank2.imageUrl }}" alt="">
+                    {% elif rank2.photo_path %}<img src="{{ url_for('static', filename=rank2.photo_path) }}" alt="">
+                    {% else %}<div class="podium-img-placeholder">✦</div>{% endif %}
+                </div>
+                <div class="podium-footer">
+                    <div class="podium-votes"><span class="tri">▲</span> {{ rank2.votes }} votes</div>
+                    <form class="upvote-form" action="{{ url_for('upvote', post_id=rank2.id) }}" method="POST">
+                        <button class="upvote-btn {% if rank2.id in upvoted_ids %}voted{% endif %}" type="submit">▲ {{ rank2.votes }}</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- #1 CENTER -->
+        <div class="podium-col">
+            <div class="podium-label">
+                <span class="rank-number gold">#1</span>
+                <div class="rank-label-text">
+                    <span class="rank-contributor">Contributor</span>
+                    <a class="rank-username" href="{{ url_for('profile', uid=rank1.user_id) }}">@{{ rank1.userName or rank1.username }}</a>
+                </div>
+            </div>
+            <div class="podium-card first">
+                <div class="podium-img-wrap">
+                    {% if rank1.imageUrl %}<img src="{{ rank1.imageUrl }}" alt="">
+                    {% elif rank1.photo_path %}<img src="{{ url_for('static', filename=rank1.photo_path) }}" alt="">
+                    {% else %}<div class="podium-img-placeholder">✦</div>{% endif %}
+                </div>
+                <div class="podium-footer">
+                    <div class="podium-votes"><span class="tri">▲</span> {{ rank1.votes }} votes</div>
+                    <form class="upvote-form" action="{{ url_for('upvote', post_id=rank1.id) }}" method="POST">
+                        <button class="upvote-btn {% if rank1.id in upvoted_ids %}voted{% endif %}" type="submit">▲ {{ rank1.votes }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- #3 RIGHT -->
+        <div class="podium-col">
+            {% if rank3 %}
+            <div class="podium-label">
+                <span class="rank-number">#3</span>
+                <div class="rank-label-text">
+                    <span class="rank-contributor">Contributor</span>
+                    <a class="rank-username" href="{{ url_for('profile', uid=rank3.user_id) }}">@{{ rank3.userName or rank3.username }}</a>
+                </div>
+            </div>
+            <div class="podium-card">
+                <div class="podium-img-wrap">
+                    {% if rank3.imageUrl %}<img src="{{ rank3.imageUrl }}" alt="">
+                    {% elif rank3.photo_path %}<img src="{{ url_for('static', filename=rank3.photo_path) }}" alt="">
+                    {% else %}<div class="podium-img-placeholder">✦</div>{% endif %}
+                </div>
+                <div class="podium-footer">
+                    <div class="podium-votes"><span class="tri">▲</span> {{ rank3.votes }} votes</div>
+                    <form class="upvote-form" action="{{ url_for('upvote', post_id=rank3.id) }}" method="POST">
+                        <button class="upvote-btn {% if rank3.id in upvoted_ids %}voted{% endif %}" type="submit">▲ {{ rank3.votes }}</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">✦</div>
+        <p class="empty-text">No posts yet — be the first to upload a look!</p>
+    </div>
+    {% endif %}
+
+
+    <!-- ══════════════════════════════════════════
+         SECTION 2 — MOST RECENT (photo card grid)
+    ══════════════════════════════════════════ -->
+    <div class="section-divider"></div>
+
+    <div class="section-heading">
+        <h2 class="section-title">Most Recent</h2>
+        <span class="section-sub">Latest Looks Across All Campuses</span>
+    </div>
+
+    {% if rest %}
+    <div class="recent-grid">
+        {% for post in rest %}
+        <div class="recent-card">
+            <div class="recent-img-wrap">
+                {% if post.imageUrl %}<img src="{{ post.imageUrl }}" alt="">
+                {% elif post.photo_path %}<img src="{{ url_for('static', filename=post.photo_path) }}" alt="">
+                {% else %}<div class="recent-img-placeholder">✦</div>{% endif %}
+
+                <div class="card-actions">
+                    <button class="card-action-btn" onclick="submitUpvote({{ post.id }})" title="Upvote">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                    </button>
+                    <button class="card-action-btn" onclick="toggleLike(this)" title="Like">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                    <button class="card-action-btn" title="Details">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="recent-footer">
+                <div class="recent-user">
+                    <div class="recent-avatar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <span class="recent-username">@{{ ((post.userName or post.username) | truncate(12, True, '…')) }}</span>
+                </div>
+                <button class="follow-btn" onclick="toggleFollow({{ post.user_id }}, this)">Follow</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">✦</div>
+        <p class="empty-text">No recent posts yet.</p>
+    </div>
+    {% endif %}
+
+
+    <!-- ══════════════════════════════════════════
+         SECTION 3 — TREND TRACKER (ranked rows)
+    ══════════════════════════════════════════ -->
+    <div class="section-divider"></div>
+
+    <div class="section-heading">
+        <h2 class="section-title">Trend Tracker</h2>
+        <span class="section-sub">Most Desired Items · Ranked by Votes</span>
+    </div>
+
+    {% if trend %}
+    <div class="trend-list">
+        {% for post in trend %}
+        <div class="trend-row">
+
+            <span class="trend-rank-num">{{ loop.index }}</span>
+
+            <div class="trend-thumb">
+                {% if post.imageUrl %}<img src="{{ post.imageUrl }}" alt="">
+                {% elif post.photo_path %}<img src="{{ url_for('static', filename=post.photo_path) }}" alt="">
+                {% else %}<div class="trend-thumb-placeholder">✦</div>{% endif %}
+            </div>
+
+            <div class="trend-info">
+                <a class="trend-username" href="{{ url_for('profile', uid=post.user_id) }}">
+                    @{{ post.userName or post.username }}
+                </a>
+                <div class="trend-tags">
+                    {% if post.items %}
+                        {% for item in post.items %}
+                        <span class="trend-tag">
+                            <span class="trend-tag-arrow">↗</span>{{ item.name }}
+                        </span>
+                        {% endfor %}
+                    {% elif post.links %}
+                        {% for link in post.links.split(',') %}
+                            {% set lnk = link.strip() %}
+                            {% if lnk %}
+                            <a class="trend-tag"
+                               href="{{ lnk if lnk.startswith('http') else 'https://' + lnk }}"
+                               target="_blank" rel="noopener">
+                                <span class="trend-tag-arrow">↗</span>{{ lnk | truncate(22, True, '…') }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="trend-votes-col">
+                <div class="trend-vote-count">
+                    <span class="trend-vote-triangle">▲</span>
+                    <span class="trend-vote-number">{{ post.votes }}</span>
+                </div>
+                <div class="trend-vote-label">Total Upvotes</div>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">✦</div>
+        <p class="empty-text">No trend data yet — upload looks and tag your items!</p>
+    </div>
+    {% endif %}
+
+</div><!-- /container -->
+
+
+<!-- ═══ UPLOAD MODAL ═══ -->
+<div class="upload-overlay" id="uploadModal" onclick="if(event.target===this)closeUpload()">
+    <div style="background:#fff;border-radius:18px;padding:32px;width:100%;max-width:420px;position:relative;">
+        <button style="position:absolute;top:16px;right:18px;background:none;border:none;font-size:20px;color:#b0aa9f;cursor:pointer;" onclick="closeUpload()">✕</button>
+        <h2 style="font-family:'DM Serif Display',serif;font-size:22px;font-style:italic;margin-bottom:4px;color:#1a1816;">Share your look.</h2>
+        <p style="font-size:12px;color:#9b9590;margin-bottom:22px;">Upload your outfit of the day</p>
+        <form method="POST" action="{{ url_for('upload_post') }}" enctype="multipart/form-data">
+            <div style="border:1.5px dashed #d4cfc6;border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;position:relative;margin-bottom:16px;">
+                <input type="file" name="photo" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
+                <div style="font-size:26px;margin-bottom:8px;">📷</div>
+                <p style="font-size:13px;color:#9b9590;"><strong style="color:#c9a84c;">Click to choose</strong> or drag &amp; drop</p>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="display:block;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#9b9590;margin-bottom:7px;">Caption</label>
+                <textarea name="caption" rows="2" placeholder="Tell us about your outfit…" style="width:100%;background:#faf9f7;border:1px solid #e0dbd4;border-radius:8px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:#1a1816;outline:none;resize:none;"></textarea>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="display:block;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#9b9590;margin-bottom:7px;">Source Links</label>
+                <input type="text" name="links" placeholder="https://… (separate with commas)" style="width:100%;background:#faf9f7;border:1px solid #e0dbd4;border-radius:8px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:#1a1816;outline:none;">
+            </div>
+            <button type="submit" style="width:100%;padding:12px;background:#c9a84c;border:none;border-radius:8px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;">Post Look</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openUpload()  { document.getElementById('uploadModal').classList.add('open'); }
+    function closeUpload() { document.getElementById('uploadModal').classList.remove('open'); }
+
+    function submitUpvote(postId) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/upvote/${postId}`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    function toggleLike(btn) {
+        btn.style.color = btn.style.color === 'rgb(231, 76, 60)' ? '' : 'rgb(231, 76, 60)';
+    }
+
+    async function toggleFollow(uid, btn) {
+        const res = await fetch(`/follow/${uid}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'followed') {
+            btn.textContent = 'Following'; btn.classList.add('following');
+        } else {
+            btn.textContent = 'Follow'; btn.classList.remove('following');
+        }
+    }
+</script>
+
+</body>
+</html>
